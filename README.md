@@ -31,12 +31,12 @@ If you want to preprocess MultiWOZ2.0 data, set '-version' to '2.0'.
 
 Our implementation supports a single GPU. Please use smaller batch sizes if out-of-memory error raises.
 
-### MTTOD without auxiliary task (for the ablation)
+-MTTOD without auxiliary task (for the ablation)
 ```
 python main.py -run_type train -model_dir checkpoints/ablation
 ```
 
-### MTTOD with auxiliary task
+-MTTOD with auxiliary task
 ```
 python main.py -run_type train -model_dir checkpoints/mttod -add_auxiliary_task
 ```
