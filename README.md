@@ -2,6 +2,24 @@
 
 This is code for the paper "Improving End-to-End Task-Oriented Dialogue System with A Simple Auxiliary Task".
 
+## checkout source code and data from github repository
+To download data.zip properly, git lfs(Large File Storage) extension must be installed.
+
+```
+# clone repository as usual
+git clone https://github.com/bepoetree/MTTOD.git
+cd MTTOD
+# check file size of data.zip
+ls -l data.zip
+
+# The file size of data.zip is about 33 MB. If not, git-lfs is not installed or failed to checked out correctly.
+# please ensure to install git-lfs (in Ubuntu or Debian, execute "apt install git-lfs" with sudo) in your system.
+# After then, Retrying LFS checkout with the following commands:
+git lfs install
+git lfs pull
+git checkout -f HEAD
+```
+
 ## Environment setting
 
 Our python version is 3.6.9.
