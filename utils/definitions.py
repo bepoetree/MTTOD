@@ -1,3 +1,12 @@
+"""
+    MTTOD: utils/definitions.py
+
+    Defines slot names and domain names for MTTOD
+
+    This code is referenced from thu-spmi's damd-multiwoz repository:
+    (https://github.com/thu-spmi/damd-multiwoz/blob/master/ontology.py)
+"""
+
 ALL_DOMAINS = ["attraction", "hotel", "restaurant", "taxi", "train", "hospital", "police"]
 
 NORMALIZE_SLOT_NAMES = {
@@ -13,13 +22,14 @@ REQUESTABLE_SLOTS = {
     "taxi": ["car", "phone"],
     "police": ["postcode", "address", "phone"],
     "hospital": ["address", "phone", "postcode"],
-    "hotel": ["address", "postcode", "internet", "phone", "parking", "type", "pricerange", "stars", "area", "reference"],
+    "hotel": ["address", "postcode", "internet", "phone", "parking",
+              "type", "pricerange", "stars", "area", "reference"],
     "attraction": ["price", "type", "address", "postcode", "phone", "area", "reference"],
     "train": ["time", "leave", "price", "arrive", "id", "reference"],
     "restaurant": ["phone", "postcode", "address", "pricerange", "food", "area", "reference"]
 }
 
-ALL_REQSLOT = ["car", "address", "postcode", "phone", "internet",  "parking", "type", "pricerange", "food",
+ALL_REQSLOT = ["car", "address", "postcode", "phone", "internet", "parking", "type", "pricerange", "food",
                       "stars", "area", "reference", "time", "leave", "price", "arrive", "id"]
 
 INFORMABLE_SLOTS = {

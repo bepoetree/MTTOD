@@ -1,28 +1,43 @@
+"""
+   MTTOD: evaluator.py
+
+   Evaluate MultiWoZ Performance.
+
+   This code is referenced from thu-spmi's damd-multiwoz repository:
+   (https://github.com/thu-spmi/damd-multiwoz/blob/master/eval.py)
+"""
+
 import os
 import math
 import argparse
+import logging
+
 from types import SimpleNamespace
 from collections import Counter, OrderedDict
 
 from nltk.util import ngrams
 
-from utils import definitions
-from utils.io_utils import get_or_create_logger, load_json
 from config import CONFIGURATION_FILE_NAME
 from reader import MultiWOZReader
+
+from utils import definitions
+from utils.io_utils import get_or_create_logger, load_json
 from utils.clean_dataset import clean_slot_values
+
 
 logger = get_or_create_logger(__name__)
 
-class BLEUScorer(object):
-    ## BLEU score calculator via GentScorer interface
-    ## it calculates the BLEU-4 by taking the entire corpus in
-    ## Calulate based multiple candidates against multiple references
+
+class BLEUScorer:
+    """
+    BLEU score calculator via GentScorer interface
+    it calculates the BLEU-4 by taking the entire corpus in
+    Calulate based multiple candidates against multiple references
+    """
     def __init__(self):
         pass
 
     def score(self, parallel_corpus):
-
         # containers
         count = [0, 0, 0, 0]
         clip_count = [0, 0, 0, 0]
@@ -75,6 +90,7 @@ class BLEUScorer(object):
         bleu = bp * math.exp(s)
         return bleu * 100
 
+
 class MultiWozEvaluator(object):
     def __init__(self, reader, eval_data_type="test"):
         self.reader = reader
@@ -86,7 +102,7 @@ class MultiWozEvaluator(object):
         self.eval_data_type = eval_data_type
 
         self.bleu_scorer = BLEUScorer()
-    
+
         self.all_info_slot = []
         for d, s_list in definitions.INFORMABLE_SLOTS.items():
             for s in s_list:
@@ -131,13 +147,15 @@ class MultiWozEvaluator(object):
                 if no_name and s == 'name':
                     continue
                 if no_book:
-                    if s in ['people', 'stay'] or key in ['hotel-day', 'restaurant-day', 'restaurant-time']:
+                    if s in ['people', 'stay'] or \
+                       key in ['hotel-day', 'restaurant-day', 'restaurant-time']:
                         continue
                 constraint_dict_flat[key] = v
 
         return constraint_dict_flat
 
-    def _constraint_compare(self, truth_cons, gen_cons, slot_appear_num=None, slot_correct_num=None):
+    def _constraint_compare(self, truth_cons, gen_cons,
+                            slot_appear_num=None, slot_correct_num=None):
         tp, fp, fn = 0, 0, 0
         false_slot = []
         for slot in gen_cons:
@@ -162,8 +180,11 @@ class MultiWozEvaluator(object):
         acc = len(self.all_info_slot) - fp - fn
         return tp, fp, fn, acc, list(set(false_slot))
 
-    def dialog_state_tracking_eval(self, dials, eval_dial_list=None, no_name=False, no_book=False, add_auxiliary_task=False):
-        total_turn, joint_match, total_tp, total_fp, total_fn, total_acc = 0, 0, 0, 0, 0, 0
+    def dialog_state_tracking_eval(self, dials,
+                                   eval_dial_list=None, no_name=False,
+                                   no_book=False, add_auxiliary_task=False):
+        total_turn, joint_match = 0, 0
+        total_tp, total_fp, total_fn, total_acc = 0, 0, 0, 0
         slot_appear_num, slot_correct_num = {}, {}
         dial_num = 0
         for dial_id in dials:
@@ -349,7 +370,7 @@ class MultiWozEvaluator(object):
         for t, turn in enumerate(dialog):
             if t == 0:
                 continue
-            
+
             sent_t = turn['resp_gen']
             # sent_t = turn['resp']
             for domain in goal.keys():
@@ -391,7 +412,8 @@ class MultiWozEvaluator(object):
                                     flag = True
                                     break
                             # if flag and venues:
-                            if flag and venues:  # sometimes there are no results so sample won't work
+                            if flag and venues:
+                                # sometimes there are no results so sample won't work
                                 # print venues
                                 # venue_offered[domain] = random.sample(venues, 1)
                                 venue_offered[domain] = venues
@@ -450,10 +472,12 @@ class MultiWozEvaluator(object):
             if domain in ['restaurant', 'hotel', 'attraction', 'train']:
                 goal_venues = self.reader.db.queryJsons(
                     domain, goal[domain]['informable'], return_name=True)
-                if type(venue_offered[domain]) is str and '_name' in venue_offered[domain]:
+                if type(venue_offered[domain]) is str and \
+                   '_name' in venue_offered[domain]:
                     match += 1
                     match_stat = 1
-                elif len(venue_offered[domain]) > 0 and len(set(venue_offered[domain]) & set(goal_venues))>0:
+                elif len(venue_offered[domain]) > 0 and \
+                     len(set(venue_offered[domain]) & set(goal_venues))>0:
                     match += 1
                     match_stat = 1
             else:
@@ -528,15 +552,15 @@ class MultiWozEvaluator(object):
                         goal[domain]['requestable'].append('id')
             else:
                 if 'reqt' in true_goal[domain]:
-                    for s in true_goal[domain]['reqt']:  # addtional requests:
-                        if s in ['phone', 'address', 'postcode', 'reference', 'id']:
+                    for reqs in true_goal[domain]['reqt']:  # addtional requests:
+                        if reqs in ['phone', 'address', 'postcode', 'reference', 'id']:
                             # ones that can be easily delexicalized
-                            goal[domain]['requestable'].append(s)
+                            goal[domain]['requestable'].append(reqs)
                 if 'book' in true_goal[domain]:
                     goal[domain]['requestable'].append("reference")
 
             for s, v in true_goal[domain]['info'].items():
-                s_, v_ = clean_slot_values(domain, s,v)
+                s_, v_ = clean_slot_values(domain, s, v)
                 if len(v_.split()) >1:
                     v_ = ' '.join(
                         [token.text for token in self.reader.nlp(v_)]).strip()
@@ -576,17 +600,20 @@ class MultiWozEvaluator(object):
         req_slots_acc = OrderedDict(sorted(req_slots_acc.items(), key = lambda x: x[1]))
 
         if dial_num:
-            metric_result.update({'act_f1':act_f1,
-                'success':success,
-                'match':match,
+            metric_result.update({'act_f1': act_f1,
+                'success': success,
+                'match': match,
                 'bleu': bleu,
-                'req_slots_acc':req_slots_acc,
+                'req_slots_acc': req_slots_acc,
                 'info_slots_acc': info_slots_acc,
                 'dial_num': dial_num})
 
-            logging.info('[DST] joint goal:%2.1f  slot acc: %2.1f  slot f1: %2.1f  act f1: %2.1f'%(jg, slot_acc, slot_f1, act_f1))
-            logging.info('[CTR] match: %2.1f  success: %2.1f  bleu: %2.1f'%(match, success, bleu))
-            logging.info('[CTR] ' + '; '.join(['%s: %2.1f' %(req,acc) for req, acc in req_slots_acc.items()]))
+            logging.info('[DST] joint goal:%2.1f  slot acc: %2.1f  slot f1: %2.1f  act f1: %2.1f',
+                         jg, slot_acc, slot_f1, act_f1)
+            logging.info('[CTR] match: %2.1f  success: %2.1f  bleu: %2.1f',
+                         match, success, bleu)
+            logging.info('[CTR] ' + '; '
+                         .join(['%s: %2.1f' %(req, acc) for req, acc in req_slots_acc.items()]))
 
             return metric_result
         else:
@@ -598,6 +625,7 @@ class MultiWozEvaluator(object):
             data, eval_dial_list=eval_dial_list, add_auxiliary_task=add_auxiliary_task)
 
         return bleu, success, match
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Argument for evaluation")
@@ -636,15 +664,11 @@ if __name__ == "__main__":
 
         score = 0.5 * (success + match) + bleu
 
-        logger.info('match: %2.2f; success: %2.2f; bleu: %2.2f; score: %.2f' % (
-            match, success, bleu, score))
+        logger.info('match: %2.2f; success: %2.2f; bleu: %2.2f; score: %.2f',
+            match, success, bleu, score)
     else:
         joint_goal, f1, accuracy, _, _ = evaluator.dialog_state_tracking_eval(
             data, eval_dial_list=eval_dial_list, add_auxiliary_task=cfg.add_auxiliary_task)
 
-        logger.info('joint acc: %2.2f; acc: %2.2f; f1: %2.2f;' % (
-            joint_goal, accuracy, f1))
-
-    
-
-    
+        logger.info('joint acc: %2.2f; acc: %2.2f; f1: %2.2f;',
+            joint_goal, accuracy, f1)

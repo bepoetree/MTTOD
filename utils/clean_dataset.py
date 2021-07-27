@@ -1,3 +1,12 @@
+""""
+   MTTOD: utils/clean_dataset.py
+
+   implements dataset cleaning preprocess
+
+   This code is referenced from thu-spmi's damd-multiwoz repository:
+   (https://github.com/thu-spmi/damd-multiwoz/blob/master/clean_dataset.py)
+"""
+
 import os
 import re
 import json
@@ -67,6 +76,7 @@ def clean_text(text, mapping_pair=None):
 
     return text
 
+
 def clean_time(utter):
     # 9 am -> 9am
     utter = re.sub(r'(\d+) ([ap]\.?m)',
@@ -79,6 +89,7 @@ def clean_time(utter):
                    lambda x: str(int(x.group(1))+12)+x.group(2), utter)
     utter = re.sub(r'(\d+)a\.?m', r'\1', utter)
     return utter
+
 
 def clean_slot_values(domain, slot, value, mapping_pair=None):
     value = clean_text(value, mapping_pair)
@@ -194,7 +205,8 @@ def clean_slot_values(domain, slot, value, mapping_pair=None):
                 value = ''
     elif domain == 'restaurant':
         if slot == "area":
-            if value in ["center", 'scentre', "center of town", "city center", "cb30aq", "town center", 'centre of cambridge', 'city centre']:
+            if value in ["center", 'scentre', "center of town", "city center",
+                         "cb30aq", "town center", 'centre of cambridge', 'city centre']:
                 value = "centre"
             elif value == "west part of town":
                 value = "west"

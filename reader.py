@@ -1,3 +1,9 @@
+"""
+   MTTOD: reader.py
+
+   implements MultiWoz Training/Validation Data Feeder for MTTOD
+"""
+
 import os
 import copy
 import spacy
@@ -176,6 +182,7 @@ class BaseIterator(object):
     def get_data_iterator(self, all_batches, task, ururu, add_auxiliary_task=False, context_size=-1):
         raise NotImplementedError
 
+
 class MultiWOZIterator(BaseIterator):
     def __init__(self, reader):
         super(MultiWOZIterator, self).__init__(reader)
@@ -183,7 +190,9 @@ class MultiWOZIterator(BaseIterator):
     def get_readable_batch(self, dial_batch):
         dialogs = {}
 
-        decoded_keys = ["user", "resp", "redx", "bspn", "aspn", "dbpn", "bspn_gen", "bspn_gen_with_span", "dbpn_gen", "aspn_gen", "resp_gen"]
+        decoded_keys = ["user", "resp", "redx", "bspn", "aspn", "dbpn",
+                        "bspn_gen", "bspn_gen_with_span",
+                        "dbpn_gen", "aspn_gen", "resp_gen"]
         for dial in dial_batch:
             dial_id = dial[0]["dial_id"]
 
@@ -221,8 +230,8 @@ class MultiWOZIterator(BaseIterator):
 
         return dialogs
 
-    def get_data_iterator(self, all_batches, task, ururu, add_auxiliary_task=False,  context_size=-1):
-        for dial_batch in all_batches:           
+    def get_data_iterator(self, all_batches, task, ururu, add_auxiliary_task=False, context_size=-1):
+        for dial_batch in all_batches:
             batch_encoder_input_ids = []
             batch_span_label_ids = []
             batch_belief_label_ids = []
@@ -241,7 +250,7 @@ class MultiWOZIterator(BaseIterator):
                         dial_history, span_history, len(turn["user"]), context_size)
 
                     encoder_input_ids = context + turn["user"] + [self.reader.eos_token_id]
-                    
+
                     # add current span of user utterance
                     for domain, ss_dict in turn["user_span"].items():
                         for s, span in ss_dict.items():
@@ -285,18 +294,18 @@ class MultiWOZIterator(BaseIterator):
                         for s, span in ss_dict.items():
                             if domain not in turn_span_info:
                                 turn_span_info[domain] = {}
-                    
+
                             if s not in turn_span_info[domain]:
                                 turn_span_info[domain][s] = []
 
                             turn_span_info[domain][s].append(span)
-                    
+
                     if task == "dst":
                         for domain, ss_dict in turn["resp_span"].items():
                             for s, span in ss_dict.items():
                                 if domain not in turn_span_info:
                                     turn_span_info[domain] = {}
-                        
+
                                 if s not in turn_span_info[domain]:
                                     turn_span_info[domain][s] = []
 
@@ -376,7 +385,7 @@ class MultiWOZIterator(BaseIterator):
 class BaseReader(object):
     def __init__(self, backbone):
         self.nlp = spacy.load("en_core_web_sm")
-        
+
         self.tokenizer = self.init_tokenizer(backbone)
 
         self.data_dir = self.get_data_dir()
@@ -425,7 +434,7 @@ class BaseReader(object):
         for intent in sorted(intents):
             token = "[" + intent + "]"
             special_tokens.append(token)
-        
+
         # add slots
         slots = list(set(definitions.ALL_INFSLOT + definitions.ALL_REQSLOT))
 
@@ -450,7 +459,7 @@ class BaseReader(object):
     @property
     def eos_token(self):
         return self.tokenizer.eos_token
-    
+
     @property
     def eos_token_id(self):
         return self.tokenizer.eos_token_id
@@ -484,7 +493,7 @@ class BaseReader(object):
         if eos_token is not None:
             if isinstance(eos_token, str):
                 eos_token = [eos_token]
-            
+
             tokens = tokens + eos_token
 
         encoded_text = self.tokenizer.encode(" ".join(tokens))
@@ -516,18 +525,18 @@ class MultiWOZReader(BaseReader):
         encoded_data = []
         for fn, dial in tqdm(data.items(), desc=data_type, total=len(data)):
             encoded_dial = []
-            
+
             accum_constraint_dict = {}
             for t in dial["log"]:
                 turn_constrain_dict = self.bspn_to_constraint_dict(t["constraint"])
                 for domain, sv_dict in turn_constrain_dict.items():
                     if domain not in accum_constraint_dict:
                         accum_constraint_dict[domain] = {}
-                    
+
                     for s, v in sv_dict.items():
                         if s not in accum_constraint_dict[domain]:
                             accum_constraint_dict[domain][s] = []
-                        
+
                         accum_constraint_dict[domain][s].append(v)
 
             prev_bspn = ""
@@ -539,9 +548,9 @@ class MultiWOZReader(BaseReader):
                 enc["pointer"] = [int(i) for i in t["pointer"].split(",")]
 
                 target_domain = enc["turn_domain"][0] if len(enc["turn_domain"]) == 1 else enc["turn_domain"][1]
-                
+
                 target_domain = target_domain[1:-1]
-                
+
                 user_ids = self.encode_text(t["user"],
                                             bos_token=definitions.BOS_USER_TOKEN,
                                             eos_token=definitions.EOS_USER_TOKEN)
@@ -577,16 +586,16 @@ class MultiWOZReader(BaseReader):
                 for domain, slots in definitions.INFORMABLE_SLOTS.items():
                     if domain not in constraint_dict:
                         continue
-                    
+
                     ordered_constraint_dict[domain] = OrderedDict()
                     for slot in slots:
                         if slot not in constraint_dict[domain]:
                             continue
-                        
+
                         value = constraint_dict[domain][slot]
 
                         ordered_constraint_dict[domain][slot] = value
-                        
+
                 ordered_bspn = self.constraint_dict_to_bspn(ordered_constraint_dict)
 
                 bspn_ids = self.encode_text(ordered_bspn,
@@ -601,19 +610,21 @@ class MultiWOZReader(BaseReader):
 
                 enc["aspn"] = aspn_ids
 
-                pointer = enc["pointer"][:-2]                
+                pointer = enc["pointer"][:-2]
                 if not any(pointer):
                     db_token = definitions.DB_NULL_TOKEN
                 else:
                     db_token = "[db_{}]".format(pointer.index(1))
-                
+
                 dbpn_ids = self.encode_text(db_token,
                                             bos_token=definitions.BOS_DB_TOKEN,
                                             eos_token=definitions.EOS_DB_TOKEN)
 
                 enc["dbpn"] = dbpn_ids
 
-                if len(enc["user"]) == 0 or len(enc["resp"]) == 0 or len(enc["redx"]) == 0 or len(enc["bspn"]) == 0 or len(enc["aspn"]) == 0 or len(enc["dbpn"]) == 0:
+                if (len(enc["user"]) == 0 or len(enc["resp"]) == 0 or
+                        len(enc["redx"]) == 0 or len(enc["bspn"]) == 0 or
+                        len(enc["aspn"]) == 0 or len(enc["dbpn"]) == 0):
                     raise ValueError(fn, idx)
 
                 # NOTE: if curr_constraint_dict does not include span[domain][slot], remove span[domain][slot] ??
@@ -633,10 +644,10 @@ class MultiWOZReader(BaseReader):
                     accum_constraint_dict)
 
                 enc["resp_span"] = resp_span
-                
+
                 '''
                 curr_constraint_dict = self.bspn_to_constraint_dict(t["constraint"])
-                
+
                 # e2e: overwrite span token w.r.t user span information only
                 e2e_constraint_dict = copy.deepcopy(curr_constraint_dict)
                 for domain, sv_dict in e2e_constraint_dict.items():
@@ -645,7 +656,9 @@ class MultiWOZReader(BaseReader):
                             e2e_constraint_dict[domain][s] = definitions.BELIEF_COPY_TOKEN
 
                         # maintaining copy token if previous value had been copied
-                        if domain in prev_constraint_dict and s in prev_constraint_dict[domain] and v == prev_constraint_dict[domain][s]:
+                        if (domain in prev_constraint_dict and
+                                s in prev_constraint_dict[domain] and
+                                v == prev_constraint_dict[domain][s]):
                             prev_enc = encoded_dial[-1]
                             prev_e2e_constraint_dict = self.bspn_to_constraint_dict(
                                 self.tokenizer.decode(prev_enc["bspn_e2e"]))
@@ -669,7 +682,9 @@ class MultiWOZReader(BaseReader):
                             dst_constraint_dict[domain][s] = definitions.BELIEF_COPY_TOKEN
 
                         # maintaining copy token if previous value had been copied
-                        if domain in prev_constraint_dict and s in prev_constraint_dict[domain] and v == prev_constraint_dict[domain][s]:
+                        if (domain in prev_constraint_dict and
+                              s in prev_constraint_dict[domain] and
+                              v == prev_constraint_dict[domain][s]):
                             prev_enc = encoded_dial[-1]
                             prev_dst_constraint_dict = self.bspn_to_constraint_dict(
                                 self.tokenizer.decode(prev_enc["bspn_dst"]))
@@ -682,7 +697,7 @@ class MultiWOZReader(BaseReader):
                 dst_bspn_ids = self.encode_text(dst_constraint,
                                                 bos_token=definitions.BOS_BELIEF_TOKEN,
                                                 eos_token=definitions.EOS_BELIEF_TOKEN)
-                
+
                 enc["bspn_dst"] = dst_bspn_ids
                 '''
                 encoded_dial.append(enc)
@@ -833,7 +848,7 @@ class MultiWOZReader(BaseReader):
         candidates = ontology[domain][slot]
 
         matches = get_close_matches(value, candidates, n=1, cutoff=cutoff)
-        
+
         if len(matches) == 0:
             return value
         else:

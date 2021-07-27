@@ -1,13 +1,22 @@
+"""
+   MTTOD: config.py
+
+   Command-line argument parser configuration
+"""
+
 import os
 import argparse
 
 from utils.io_utils import load_json, save_json, get_or_create_logger
 
+
 CONFIGURATION_FILE_NAME = "run_config.json"
 
 logger = get_or_create_logger(__name__)
 
+
 def add_config(parser):
+    """ define arguments """
     group = parser.add_argument_group("Construction")
     group.add_argument("-backbone", type=str, default="t5-base",
                        choices=["t5-small", "t5-base", "t5-large"])
@@ -65,6 +74,7 @@ def add_config(parser):
 
 
 def check_config(parser):
+    """ parse arguments and check configuration """
     cfg = parser.parse_args()
 
     if cfg.run_type == "predict" and cfg.ckpt is None:
@@ -89,9 +99,9 @@ def check_config(parser):
                     old_value = ckpt_cfg.get(key)
 
                     if old_value is not None and new_value != old_value:
-                        logger.warn(
-                            "Update argument for consistency (%s: %s -> %s)" %
-                            (key, str(new_value), str(old_value)))
+                        logger.warning(
+                            "Update argument for consistency (%s: %s -> %s)",
+                            key, str(new_value), str(old_value))
 
                         setattr(cfg, key, old_value)
 
@@ -114,15 +124,14 @@ def check_config(parser):
 
 
 def get_config():
+    """ return ArgumentParser Instance """
     parser = argparse.ArgumentParser(
         description="Configuration of task-oriented dialogue model with multi-task learning.")
 
     add_config(parser)
 
-    cfg = check_config(parser)
-
-    return cfg
+    return check_config(parser)
 
 
 if __name__ == "__main__":
-    cfg = get_config()
+    configs = get_config()

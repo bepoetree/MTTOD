@@ -1,3 +1,10 @@
+"""
+   MTTOD: model.py
+
+   implements MTTOD model, with huggingface transformers module.
+"""
+
+
 import copy
 
 import torch
@@ -50,7 +57,10 @@ class T5WithSpan(T5ForConditionalGeneration):
 
         return span_loss, pred_spans, span_logits
 
-    def prepare_inputs_for_generation(self, input_ids, past=None, attention_mask=None, use_cache=None, encoder_outputs=None, **kwargs):
+    def prepare_inputs_for_generation(self, input_ids,
+                                      past=None, attention_mask=None,
+                                      use_cache=None, encoder_outputs=None,
+                                      **kwargs):
         if past is not None:
             input_ids = input_ids[:, -1:]
 
@@ -116,7 +126,7 @@ class T5WithSpan(T5ForConditionalGeneration):
         if decoder_type == "resp":
             decoder = self.resp_decoder
             lm_head = self.resp_lm_head
-            
+
         else:
             decoder = self.decoder
             lm_head = self.lm_head

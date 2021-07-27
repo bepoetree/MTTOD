@@ -1,3 +1,9 @@
+"""
+    MTTOD: runner.py
+
+    implements train and predict function for MTTOD model
+"""
+
 import os
 import re
 import copy
@@ -188,7 +194,7 @@ class BaseRunner(metaclass=ABCMeta):
             model = torch.nn.DataParallel(model)
         '''
         model.to(self.cfg.device)
-        
+
         return model
 
     def save_model(self, epoch):
@@ -219,18 +225,18 @@ class BaseRunner(metaclass=ABCMeta):
 
     def get_optimizer_and_scheduler(self, num_traininig_steps_per_epoch, train_batch_size):
         '''
-        num_train_steps = num_train_examples * \
-            self.cfg.epochs // (train_batch_size * self.cfg.grad_accum_steps)
+        num_train_steps = (num_train_examples *
+            self.cfg.epochs) // (train_batch_size * self.cfg.grad_accum_steps)
         '''
-        num_train_steps = (num_traininig_steps_per_epoch * \
+        num_train_steps = (num_traininig_steps_per_epoch *
             self.cfg.epochs) // self.cfg.grad_accum_steps
-        
+
         if self.cfg.warmup_steps >= 0:
             num_warmup_steps = self.cfg.warmup_steps
         else:
             #num_warmup_steps = int(num_train_steps * 0.2)
             num_warmup_steps = int(num_train_steps * self.cfg.warmup_ratio)
-            
+
         logger.info("Total training steps = {}, warmup steps = {}".format(
             num_train_steps, num_warmup_steps))
 
@@ -285,7 +291,7 @@ class MultiWOZRunner(BaseRunner):
         span_labels = span_labels.to(self.cfg.device)
         belief_labels = belief_labels.to(self.cfg.device)
         resp_labels = resp_labels.to(self.cfg.device)
-        
+
         attention_mask = torch.where(inputs == self.reader.pad_token_id, 0, 1)
 
         belief_outputs = self.model(input_ids=inputs,
@@ -295,7 +301,7 @@ class MultiWOZRunner(BaseRunner):
                                     return_dict=False,
                                     add_auxiliary_task=self.cfg.add_auxiliary_task,
                                     decoder_type="belief")
-        
+
         belief_loss = belief_outputs[0]
         belief_pred = belief_outputs[1]
 
@@ -367,28 +373,28 @@ class MultiWOZRunner(BaseRunner):
                                     "count": num_resp_count.item()}
 
         return loss, step_outputs
-        
+
     def train_epoch(self, train_iterator, optimizer, scheduler, reporter=None):
         self.model.train()
         self.model.zero_grad()
 
         for step, batch in enumerate(train_iterator):
             start_time = time.time()
-   
+
             inputs, labels = batch
-            
+
             _, belief_labels, _ = labels
 
             loss, step_outputs = self.step_fn(inputs, *labels)
-                       
+
             if self.cfg.grad_accum_steps > 1:
                 loss = loss / self.cfg.grad_accum_steps
-                      
+
             loss.backward()
 
             torch.nn.utils.clip_grad_norm_(
                 self.model.parameters(), self.cfg.max_grad_norm)
-            
+
             if (step + 1) % self.cfg.grad_accum_steps == 0:
                 optimizer.step()
                 scheduler.step()
@@ -398,29 +404,30 @@ class MultiWOZRunner(BaseRunner):
 
                 if reporter is not None:
                     reporter.step(start_time, lr, step_outputs)
-            
+
     def train(self):
         train_batches, num_training_steps_per_epoch, _, _ = self.iterator.get_batches(
-            "train", self.cfg.batch_size, self.cfg.num_gpus, shuffle=True, num_dialogs=self.cfg.num_train_dialogs, excluded_domains=self.cfg.excluded_domains)
+            "train", self.cfg.batch_size, self.cfg.num_gpus, shuffle=True,
+            num_dialogs=self.cfg.num_train_dialogs, excluded_domains=self.cfg.excluded_domains)
 
         optimizer, scheduler = self.get_optimizer_and_scheduler(
             num_training_steps_per_epoch, self.cfg.batch_size)
 
         reporter = Reporter(self.cfg.log_frequency, self.cfg.model_dir)
 
-        for epoch in range(1, self.cfg.epochs + 1):    
+        for epoch in range(1, self.cfg.epochs + 1):
             train_iterator = self.iterator.get_data_iterator(
                 train_batches, self.cfg.task, self.cfg.ururu, self.cfg.add_auxiliary_task, self.cfg.context_size)
 
             self.train_epoch(train_iterator, optimizer, scheduler, reporter)
-            
+
             logger.info("done {}/{} epoch".format(epoch, self.cfg.epochs))
 
             self.save_model(epoch)
 
             if not self.cfg.no_validation:
                 self.validation(reporter.global_step)
-            
+
     def validation(self, global_step):
         self.model.eval()
 
@@ -475,7 +482,7 @@ class MultiWOZRunner(BaseRunner):
 
                 #print(self.reader.tokenizer.decode(input_id))
                 #print(self.reader.tokenizer.decode(bspn))
-                
+
                 eos_idx = input_id.index(self.reader.eos_token_id)
                 input_id = input_id[:eos_idx]
 
@@ -484,7 +491,7 @@ class MultiWOZRunner(BaseRunner):
                 bos_user_id = self.reader.get_token_id(definitions.BOS_USER_TOKEN)
 
                 span_output = span_output[:eos_idx]
-                
+
                 b_slot = None
                 for t, span_token_idx in enumerate(span_output):
                     turn_id = max(input_id[:t].count(bos_user_id) - 1, 0)
@@ -531,7 +538,7 @@ class MultiWOZRunner(BaseRunner):
 
                         if s == "destination" or s == "departure":
                             _s = "destination" if s == "departure" else "departure"
-                            
+
                             if _s in sv_dict and v == sv_dict[_s]:
                                 if s in span_dict[domain]:
                                     del span_dict[domain][s]
@@ -565,7 +572,7 @@ class MultiWOZRunner(BaseRunner):
 
                 if self.cfg.overwrite_with_span:
                     _constraint_dict = OrderedDict()
-                    
+
                     for domain, slots in definitions.INFORMABLE_SLOTS.items():
                         if domain in constraint_dict or domain in span_dict:
                             _constraint_dict[domain] = OrderedDict()
@@ -590,7 +597,7 @@ class MultiWOZRunner(BaseRunner):
                             _constraint_dict[domain][slot] = slot_value
                 else:
                     _constraint_dict = copy.deepcopy(constraint_dict)
-            
+
                 bspn_gen_with_span = self.reader.constraint_dict_to_bspn(
                     _constraint_dict)
 
@@ -614,7 +621,7 @@ class MultiWOZRunner(BaseRunner):
 
         batch_decoded = []
         for resp_output in resp_outputs:
-            resp_output = resp_output[1: ]
+            resp_output = resp_output[1:]
             if self.reader.eos_token_id in resp_output:
                 eos_idx = resp_output.index(self.reader.eos_token_id)
                 resp_output = resp_output[:eos_idx]
@@ -649,7 +656,8 @@ class MultiWOZRunner(BaseRunner):
         self.model.eval()
 
         pred_batches, _, _, _ = self.iterator.get_batches(
-            self.cfg.pred_data_type, self.cfg.batch_size, self.cfg.num_gpus, excluded_domains=self.cfg.excluded_domains)
+            self.cfg.pred_data_type, self.cfg.batch_size,
+            self.cfg.num_gpus, excluded_domains=self.cfg.excluded_domains)
 
         early_stopping = True if self.cfg.beam_size > 1 else False
 
@@ -660,7 +668,7 @@ class MultiWOZRunner(BaseRunner):
             for domains, dial_ids in self.iterator.dial_by_domain.items():
                 domain_list = domains.split("-")
 
-                if len(set(domain_list) & set(self.cfg.excluded_domains)) == 0:                    
+                if len(set(domain_list) & set(self.cfg.excluded_domains)) == 0:
                     eval_dial_list.extend(dial_ids)
 
         results = {}
@@ -731,7 +739,7 @@ class MultiWOZRunner(BaseRunner):
 
                 if self.cfg.add_auxiliary_task:
                     pred_spans = span_outputs[1].cpu().numpy().tolist()
-                    
+
                     input_ids = batch_encoder_input_ids.cpu().numpy().tolist()
                 else:
                     pred_spans = None
@@ -739,7 +747,7 @@ class MultiWOZRunner(BaseRunner):
 
                 decoded_belief_outputs = self.finalize_bspn(
                     belief_outputs, domain_history, constraint_dicts, pred_spans, input_ids)
-                
+
                 for t, turn in enumerate(turn_batch):
                     turn.update(**decoded_belief_outputs[t])
                     '''
@@ -749,7 +757,7 @@ class MultiWOZRunner(BaseRunner):
                     print(self.reader.tokenizer.decode(turn["bspn_gen_with_span"]))
                     input()
                     '''
-                    
+
                 if self.cfg.task == "e2e":
                     dbpn = []
 
@@ -890,7 +898,7 @@ class MultiWOZRunner(BaseRunner):
             save_json(results, os.path.join(self.cfg.ckpt, self.cfg.output))
 
         evaluator = MultiWozEvaluator(self.reader, self.cfg.pred_data_type)
-            
+
         if self.cfg.task == "e2e":
             bleu, success, match = evaluator.e2e_eval(
                 results, eval_dial_list=eval_dial_list, add_auxiliary_task=self.cfg.add_auxiliary_task)

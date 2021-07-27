@@ -1,25 +1,32 @@
-import os
-import sys
-import random
-from tqdm import tqdm
-from collections import defaultdict
+"""
+   MTTOD: external_knowledges.py
 
-import numpy as np
+   Implements MultiWoZ JSON Object Handler.
+
+   This code is referenced from thu-spmi's damd-multiwoz repository:
+   (https://github.com/thu-spmi/damd-multiwoz/blob/master/db_ops.py)
+
+"""
+
+import os
+import random
+from collections import defaultdict
 
 from utils import definitions
 from utils.io_utils import load_json, get_or_create_logger
-from utils.clean_dataset import clean_slot_values
 
 
 logger = get_or_create_logger(__name__)
 
 
-class MultiWozDB(object):
+class MultiWozDB:
+    """ MultiWoZ JSON Handler class """
     def __init__(self, db_dir):
         self.dbs = {}
 
         for domain in definitions.ALL_DOMAINS:
-            self.dbs[domain] = load_json(os.path.join(db_dir, "{}_db_processed.json".format(domain)))
+            self.dbs[domain] = load_json(os.path.join(db_dir,
+                                                      "{}_db_processed.json".format(domain)))
 
         self.db_domains = ["attraction", "hotel", "restaurant", "train"]
 
@@ -30,10 +37,10 @@ class MultiWozDB(object):
             dbs = self.dbs[db_domain]
             for ent in dbs:
                 for slot in definitions.EXTRACTIVE_SLOT:
-                    
-                    if slot == "leave" or slot == "arrive":
+
+                    if slot in ["leave", "arrive"]:
                         continue
-                    
+
                     if slot not in ent or ent[slot] in extractive_ontology[db_domain][slot]:
                         continue
 
@@ -41,7 +48,7 @@ class MultiWozDB(object):
 
         self.extractive_ontology = extractive_ontology
 
-    def oneHotVector(self, domain, num):
+    def one_hot_vector(self, domain, num):
         """Return number of available entities for particular domain."""
         vector = [0, 0, 0, 0]
         if num == '':
@@ -82,7 +89,7 @@ class MultiWozDB(object):
         # if turn_domains is None:
         #     turn_domains = db_domains
         if domain in self.db_domains:
-            vector = self.oneHotVector(domain, match_num)
+            vector = self.one_hot_vector(domain, match_num)
         else:
             vector = [0, 0, 0, 0]
         return vector
@@ -92,7 +99,7 @@ class MultiWozDB(object):
         # if turn_domains is None:
         #     turn_domains = db_domains
         if domain in self.db_domains:
-            vector = self.oneHotVector(domain, match_num)
+            vector = self.one_hot_vector(domain, match_num)
         else:
             vector = [0, 0, 0, 0]
 
@@ -209,7 +216,7 @@ class MultiWozDB(object):
                     continue
 
                 if s not in db_ent:
-                    # logging.warning('Searching warning: slot %s not in %s db'%(s, domain))
+                    # logger.warning('Searching warning: slot %s not in %s db', s, domain)
                     match = False
                     break
 
@@ -222,7 +229,7 @@ class MultiWozDB(object):
                         # raise error if time value is not xx:xx format
                         h, m = v.split(':')
                         v = int(h)*60+int(m)
-                    except:
+                    except ValueError:
                         match = False
                         break
                     time = int(db_ent[s].split(':')[0])*60 + \
