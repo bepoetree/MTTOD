@@ -1,3 +1,9 @@
+"""
+   MTTOD: main.py
+
+   Command-line Interface for MTTOD.
+"""
+
 import random
 
 import torch
@@ -10,7 +16,9 @@ from utils.io_utils import get_or_create_logger
 
 logger = get_or_create_logger(__name__)
 
+
 def main():
+    """ main function """
     cfg = get_config()
 
     # cuda setup
@@ -20,7 +28,7 @@ def main():
     setattr(cfg, "device", device)
     setattr(cfg, "num_gpus", num_gpus)
 
-    logger.info("Device: {} (the number of GPUs: {})".format(device, num_gpus))
+    logger.info("Device: %s (the number of GPUs: %d)", str(device), num_gpus)
 
     if cfg.seed > 0:
         random.seed(cfg.seed)
@@ -28,7 +36,7 @@ def main():
         torch.manual_seed(cfg.seed)
         torch.cuda.manual_seed_all(cfg.seed)
 
-        logger.info("Set random seed to {}".format(cfg.seed))
+        logger.info("Set random seed to %d", cfg.seed)
 
     runner = MultiWOZRunner(cfg)
 
@@ -36,6 +44,7 @@ def main():
         runner.train()
     else:
         runner.predict()
+
 
 if __name__ == "__main__":
     main()

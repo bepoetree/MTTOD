@@ -1,16 +1,25 @@
+"""
+   MTTOD: preprocess.py
+
+   implements data preprocessor for MTTOD
+"""
+
 import os
 import re
 import copy
-import spacy
 import argparse
-from tqdm import tqdm
 from collections import OrderedDict
+
+import spacy
+
+from tqdm import tqdm
 
 from utils import definitions
 from utils.io_utils import load_json, save_json, load_text
 from utils.clean_dataset import clean_text, clean_slot_values
 
 from external_knowledges import MultiWozDB
+
 
 class Preprocessor(object):
     def __init__(self, version):
@@ -35,7 +44,7 @@ class Preprocessor(object):
         self.mapping_pair = self.load_mapping_pair()
 
         self.get_db_values()
-        
+
         self.preprocess_db()
 
         self.db = MultiWozDB(os.path.join(self.data_dir, "db"))
@@ -46,13 +55,15 @@ class Preprocessor(object):
         self.delex_mt_valdict_path = os.path.join(self.save_dir, "delex_multi_valdict.json")
         self.ambiguous_val_path = os.path.join(self.save_dir, "ambiguous_values.json")
 
-        if not os.path.exists(self.delex_sg_valdict_path) or not os.path.exists(self.delex_mt_valdict_path) or not os.path.exists(self.ambiguous_val_path):
+        if (not os.path.exists(self.delex_sg_valdict_path) or
+                not os.path.exists(self.delex_mt_valdict_path) or
+                not os.path.exists(self.ambiguous_val_path)):
             self.delex_sg_valdict, self.delex_mt_valdict, self.ambiguous_vals = self.get_delex_valdict()
         else:
             self.delex_sg_valdict = load_json(self.delex_sg_valdict_path)
             self.delex_mt_valdict = load_json(self.delex_mt_valdict_path)
             self.ambiguous_vals = load_json(self.ambiguous_val_path)
-        
+
     def load_mapping_pair(self):
         mapping_pair = []
 
@@ -60,7 +71,7 @@ class Preprocessor(object):
         with open(os.path.join(curr_dir, 'utils/mapping.pair'), 'r') as fin:
             for line in fin.readlines():
                 fromx, tox = line.replace('\n', '').split('\t')
-    
+
                 mapping_pair.append((fromx, tox))
 
         return mapping_pair
@@ -76,8 +87,9 @@ class Preprocessor(object):
         ontology_path = os.path.join(self.data_dir, "ontology.json")
 
         otlg = load_json(ontology_path)
-        
-        for domain, slots in value_set.items():  # add all informable slots to bspn_word, create lists holder for values
+
+        for domain, slots in value_set.items():
+            # add all informable slots to bspn_word, create lists holder for values
             processed[domain] = {}
             bspn_word.append('['+domain+']')
             for slot, values in slots.items():
@@ -85,8 +97,9 @@ class Preprocessor(object):
                 if s_p in definitions.INFORMABLE_SLOTS[domain]:
                     bspn_word.append(s_p)
                     processed[domain][s_p] = []
-        
-        for domain, slots in value_set.items():  # add all words of values of informable slots to bspn_word
+
+        for domain, slots in value_set.items():
+            # add all words of values of informable slots to bspn_word
             for slot, values in slots.items():
                 s_p = definitions.NORMALIZE_SLOT_NAMES.get(slot, slot)
                 if s_p in definitions.INFORMABLE_SLOTS[domain]:
@@ -97,7 +110,7 @@ class Preprocessor(object):
                         for x in v_p.split():
                             if x not in bspn_word:
                                 bspn_word.append(x)
-        
+
         for domain_slot, values in otlg.items():  # split domain-slots to domains and slots
             tokens = domain_slot.split('-')
             if len(tokens) == 3:
@@ -141,7 +154,7 @@ class Preprocessor(object):
         save_json(bspn_word, os.path.join(self.save_dir, "bspn_word_collection.json"))
 
         print("DB value set processed !")
-        
+
     def preprocess_db(self):
         dbs = {}
         for domain in definitions.ALL_DOMAINS:
@@ -170,7 +183,8 @@ class Preprocessor(object):
             'taxi': ['taxi_phone'],
             'police': ['id'],
             'hospital': ['id'],
-            'hotel': ['id', 'location', 'internet', 'parking', 'takesbookings', 'stars', 'price', 'n', 'postcode', 'phone'],
+            'hotel': ['id', 'location', 'internet', 'parking', 'takesbookings',
+                      'stars', 'price', 'n', 'postcode', 'phone'],
             'attraction': ['id', 'location', 'pricerange', 'price', 'openhours', 'postcode', 'phone'],
             'train': ['price', 'id'],
             'restaurant': ['id', 'location', 'introduction', 'signature', 'type', 'postcode', 'phone'],
@@ -224,7 +238,7 @@ class Preprocessor(object):
 
         single_token_values = OrderedDict(
             sorted(single_token_values.items(), key=lambda kv: len(kv[0]), reverse=True))
-        
+
         save_json(single_token_values, self.delex_sg_valdict_path)
 
         print('single delex value dict saved!')
@@ -251,7 +265,7 @@ class Preprocessor(object):
                 continue
             if definitions.DA_ABBR_TO_SLOT_NAME.get(slot):
                 slot = definitions.DA_ABBR_TO_SLOT_NAME[slot]
-            
+
             ### my code
             if slot == "price" and ("cheap" in s[2] or "moderate" in s[2] or "expensive" in s[2]):
                 slot = "pricerange"
@@ -264,7 +278,7 @@ class Preprocessor(object):
                 u[idx] = ''
             try:
                 u[s[3]] = '[value_'+slot+']'
-            except:
+            except (NameError, IndexError):
                 u[5] = '[value_'+slot+']'
         u_delex = ' '.join([t for t in u if t is not ''])
         u_delex = u_delex.replace(
@@ -286,7 +300,8 @@ class Preprocessor(object):
                       '[value_price]', text)
         text = re.sub(r'tr[\d]{4}', '[value_id]', text)
         text = re.sub(
-            r'([a-z]{1}[\. ]?[a-z]{1}[\. ]?\d{1,2}[, ]+\d{1}[\. ]?[a-z]{1}[\. ]?[a-z]{1}|[a-z]{2}\d{2}[a-z]{2})', '[value_postcode]', text)
+            r'([a-z]{1}[\. ]?[a-z]{1}[\. ]?\d{1,2}[, ]+\d{1}[\. ]?[a-z]{1}[\. ]?[a-z]{1}|[a-z]{2}\d{2}[a-z]{2})',
+            '[value_postcode]', text)
 
         for value, slot in self.delex_mt_valdict.items():
             text = text.replace(value, '[value_%s]' % slot)
@@ -307,7 +322,8 @@ class Preprocessor(object):
             ent_type = 'time' if ':' in ambg_ent else 'place'
 
             for fw in front_words[::-1]:
-                if fw in ['arrive', 'arrives', 'arrived', 'arriving', 'arrival', 'destination', 'there', 'reach',  'to', 'by', 'before']:
+                if fw in ['arrive', 'arrives', 'arrived', 'arriving', 'arrival',
+                          'destination', 'there', 'reach', 'to', 'by', 'before']:
                     slot = '[value_arrive]' if ent_type == 'time' else '[value_destination]'
                     text = re.sub(' '+ambg_ent, ' '+slot, text)
                 elif fw in ['leave', 'leaves', 'leaving', 'depart', 'departs', 'departing', 'departure',
@@ -316,7 +332,7 @@ class Preprocessor(object):
                     text = re.sub(' '+ambg_ent, ' '+slot, text)
 
         text = text.replace('[value_car] [value_car]', '[value_car]')
-        
+
         return text
 
     def preprocess(self):
@@ -398,7 +414,7 @@ class Preprocessor(object):
                     single_turn['nodelx_resp'] = ' '.join(clean_text(dial_turn['text']).split())
 
                     # get belief state, semi=informable/book=requestable, put into constraint_dict
-                    
+
                     # this has no delete operations because it has cumulative property
                     #curr_constraint_dict = OrderedDict()
                     for domain in dial_domains:
@@ -427,7 +443,7 @@ class Preprocessor(object):
                     for domain, sv_dict in curr_constraint_dict.items():
                         if domain not in constraint_dict:
                             constraint_dict[domain] = OrderedDict()
-                        
+
                         for s, v in sv_dict.items():
                             constraint_dict[domain][s] = v
                     '''
@@ -562,8 +578,9 @@ class Preprocessor(object):
                 test_data[fn] = dial
             else:
                 train_data[fn] = dial
-        
-        print("Save preprocessed data to {} (#train: {}, #dev: {}, #test: {})".format(self.save_dir, len(train_data), len(dev_data), len(test_data)))
+
+        print("Save preprocessed data to {} (#train: {}, #dev: {}, #test: {})"
+                .format(self.save_dir, len(train_data), len(dev_data), len(test_data)))
 
         save_json(train_data, os.path.join(self.save_dir, "train_data.json"))
         save_json(dev_data, os.path.join(self.save_dir, "dev_data.json"))

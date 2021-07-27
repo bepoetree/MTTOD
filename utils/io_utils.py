@@ -1,3 +1,10 @@
+"""
+    MTTOD: utils/io_utils.py
+
+    implements simple I/O utilities for serialized objects and
+    logger definitions
+"""
+
 import os
 import json
 import pickle
