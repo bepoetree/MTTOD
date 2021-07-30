@@ -79,10 +79,12 @@ We use the evaluation scripts implemented by [Zhang et al., 2020](https://arxiv.
 python evaluator.py -data $CHECKPOINT/$MODEL_OUTPUT
 ```
 
-## Acknowledgement
+## Acknowledgements
 
-This code is based on the released code (https://github.com/thu-spmi/damd-multiwoz/) for "Task-Oriented Dialog Systems that Consider Multiple Appropriate Responses under the Same Context".
+This code is based on the released code (https://github.com/thu-spmi/damd-multiwoz/) for "Task-Oriented Dialog Systems that Consider Multiple Appropriate Responses under the Same Context", which distributed under Apache License Version 2.0. 
+Copyright 2019- Yichi Zhang.
 
-For the pre-trained language model, we use huggingface's Transformer (https://huggingface.co/transformers/index.html#).
+For the pre-trained language model, we use huggingface's Transformer (https://huggingface.co/transformers/index.html#), which distributed under Apache License Version 2.0. 
+Copyright 2018- The Hugging Face team. All rights reserved.
 
 We are grateful for their excellent works.
