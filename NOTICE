@@ -1,0 +1,18 @@
+MTTOD
+Copyright 2021 ETRI LIRS, Yohan Lee
+
+This code is referenced from the released OSS code for 
+"Task-Oriented Dialog Systems that Consider Multiple 
+Appropriate Responses under the Same Context", in AAAI 2020.
+which distributed under Apache License Version 2.0. 
+
+Copyright 2019- Yichi Zhang.
+(URL: https://github.com/thu-spmi/damd-multiwoz/) 
+
+For the pre-trained language model, we use huggingface's 
+Transformer, which distributed under Apache License Version 2.0. 
+
+Copyright 2018- The Hugging Face team. All rights reserved.
+(URL: https://huggingface.co/transformers/index.html#), 
+
+We are grateful for their excellent works.
