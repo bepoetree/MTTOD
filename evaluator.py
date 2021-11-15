@@ -133,8 +133,8 @@ class MultiWozEvaluator(object):
                 continue
             for turn in dial:
                 # excepoch <bos_resp>, <eos_resp>
-                gen.append(" ".join(turn['resp_gen'].split())[1:-1])
-                truth.append(" ".join(turn['redx'].split())[1:-1])
+                gen.append(" ".join(turn['resp_gen'].split()[1:-1]))
+                truth.append(" ".join(turn['redx'].split()[1:-1]))
 
         wrap_generated = [[_] for _ in gen]
         wrap_truth = [[_] for _ in truth]

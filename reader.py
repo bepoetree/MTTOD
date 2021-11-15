@@ -118,7 +118,7 @@ class BaseIterator(object):
         num_turns = 0
         num_dials = 0
         for k in turn_bucket:
-            if data_type != "test" and k == 1 or k >= 17:
+            if data_type != "test" and (k == 1 or k >= 17):
                 continue
 
             batches = self.construct_mini_batch(
