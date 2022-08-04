@@ -107,6 +107,12 @@ def clean_time(utter):
 
 
 def clean_slot_values(domain, slot, value, mapping_pair=None):
+    if isinstance(value, list):
+        if len(value) == 0:
+            value = ""
+        else:
+            value = value[0]
+            
     value = clean_text(value, mapping_pair)
     if not value:
         value = ''

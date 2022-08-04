@@ -11,8 +11,10 @@ git clone https://github.com/bepoetree/MTTOD.git
 cd MTTOD
 # check file size of data.zip
 ls -l data.zip
+# unzip
+unzip data.zip -d data/
 
-# The file size of data.zip is about 33 MB. If not, git-lfs is not installed or failed to checked out correctly.
+# The file size of data.zip is about 52 MB. If not, git-lfs is not installed or failed to checked out correctly.
 # please ensure to install git-lfs (in Ubuntu or Debian, execute "apt install git-lfs" with sudo) in your system.
 # After then, Retrying LFS checkout with the following commands:
 git lfs install
@@ -36,6 +38,7 @@ python -m spacy download en_core_web_sm
 For the experiments, we use MultiWOZ2.0 and MultiWOZ2.1.
 - (MultiWOZ2.0) annotated_user_da_with_span_full.json: A fully annotated version of the original MultiWOZ2.0 data released by developers of Convlab available [here](https://github.com/ConvLab/ConvLab/tree/master/data/multiwoz/annotation).
 - (MultiWOZ2.1) data.json: The original MultiWOZ 2.1 data released by researchers in University of Cambrige available [here](https://github.com/budzianowski/multiwoz/tree/master/data).
+- (MultiWOZ2.2) data.json: The MultiWOZ2.2 dataset converted to the same format as MultiWOZ2.1 using script [here](https://github.com/budzianowski/multiwoz/tree/master/data/MultiWOZ_2.2).
 
 We use the preprocessing scripts implemented by [Zhang et al., 2020](https://arxiv.org/abs/1911.10484). Please refer to [here](https://github.com/thu-spmi/damd-multiwoz/blob/master/data/multi-woz/README.md) for the details.
 
@@ -71,12 +74,31 @@ The result file (```$MODEL_OUTPUT```) will be saved in the checkpoint directory.
 
 To reduce inference time, it is recommended to set large ```$BATCH_SIZE```. In our experiemnts, it is set to 16 for inference.
 
+You can download our trained model [here](https://drive.google.com/file/d/1azIdWPgJKa3PTBFE8lZ1B02bfgguKS2u/view?usp=sharing).
+
 ## Evaluation
 
 We use the evaluation scripts implemented by [Zhang et al., 2020](https://arxiv.org/abs/1911.10484).
 
 ```
 python evaluator.py -data $CHECKPOINT/$MODEL_OUTPUT
+```
+
+# Standardized Evaluation
+
+For the MultiWOZ benchmark, we recommend to use [standardized evaluation script](https://github.com/Tomiinek/MultiWOZ_Evaluation).
+
+```
+# MultiWOZ2.2 is used for the benchmark (MultiWOZ2.2 should be preprocessed prior to this step)
+python main.py -run_type predict -ckpt $CHECKPOINT -output $MODEL_OUTPUT -batch_size $BATCH_SIZE -version 2.2
+
+# clone the standardized evaluation repository
+git clone https://github.com/Tomiinek/MultiWOZ_Evaluation
+cd MultiWOZ_Evaluation
+pip install -r requirements.txt
+
+# do standardized evaluation
+python evaluate.py -i $CHECKPOINT/$MODEL_OUTPUT -b -s -r
 ```
 
 ## Acknowledgements

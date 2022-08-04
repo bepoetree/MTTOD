@@ -34,8 +34,6 @@ def add_config(parser):
     group = parser.add_argument_group("Construction")
     group.add_argument("-backbone", type=str, default="t5-base",
                        choices=["t5-small", "t5-base", "t5-large"])
-    group.add_argument("-version", type=str, default="2.1",
-                       choices=["2.0", "2.1"])
     group.add_argument("-task", type=str, default="e2e",
                        choices=["dst", "e2e"])
     group.add_argument("-add_auxiliary_task", action="store_true")
@@ -85,7 +83,8 @@ def add_config(parser):
     group.add_argument("-log_frequency", type=int, default=100)
     group.add_argument("-max_to_keep_ckpt", type=int, default=5)
     group.add_argument("-num_gpus", type=int, default=1)
-
+    group.add_argument("-version", type=str, default="2.1",
+                       choices=["2.0", "2.1", "2.2"])
 
 def check_config(parser):
     """ parse arguments and check configuration """

@@ -59,6 +59,8 @@ class Preprocessor(object):
             self.test_list = load_text(os.path.join(self.data_dir, "testListFile.txt"))
             self.do_tokenize_text = True
 
+        self.version = version
+
         self.mapping_pair = self.load_mapping_pair()
 
         self.get_db_values()
@@ -275,7 +277,10 @@ class Preprocessor(object):
         return single_token_values, multi_token_values, ambiguous_entities
 
     def delex_by_annotation(self, dial_turn):
-        u = dial_turn['text'].split()
+        if self.version == "2.2":
+            u = list(dial_turn['text'])
+        else:
+            u = dial_turn['text'].split()
         span = dial_turn['span_info']
         for s in span:
             slot = s[1]
@@ -291,14 +296,22 @@ class Preprocessor(object):
 
             for idx in range(s[3], s[4] + 1):
                 if idx >= len(u):
-                    print(dial_turn)
+                    break
 
                 u[idx] = ''
             try:
                 u[s[3]] = '[value_'+slot+']'
             except (NameError, IndexError):
                 u[5] = '[value_'+slot+']'
-        u_delex = ' '.join([t for t in u if t is not ''])
+
+        if self.version == "2.2":
+            u_delex = ''.join([t for t in u if t is not ''])
+            u_delex = u_delex.replace("]", "] ")
+            u_delex = u_delex.replace("[", " [")
+            u_delex = ' '.join(u_delex.strip().split())
+        else:
+            u_delex = ' '.join([t for t in u if t is not ''])
+            
         u_delex = u_delex.replace(
             '[value_address] , [value_address] , [value_address]', '[value_address]')
         u_delex = u_delex.replace(
@@ -608,7 +621,7 @@ class Preprocessor(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Argument for preprocessing")
 
-    parser.add_argument("-version", type=str, default="2.0", choices=["2.0", "2.1"])
+    parser.add_argument("-version", type=str, default="2.0", choices=["2.0", "2.1", "2.2"])
 
     args = parser.parse_args()
 
