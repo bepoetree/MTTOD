@@ -84,13 +84,15 @@ We use the evaluation scripts implemented by [Zhang et al., 2020](https://arxiv.
 python evaluator.py -data $CHECKPOINT/$MODEL_OUTPUT
 ```
 
-# Standardized Evaluation
+## Standardized Evaluation
 
 For the MultiWOZ benchmark, we recommend to use [standardized evaluation script](https://github.com/Tomiinek/MultiWOZ_Evaluation).
 
 ```
 # MultiWOZ2.2 is used for the benchmark (MultiWOZ2.2 should be preprocessed prior to this step)
 python main.py -run_type predict -ckpt $CHECKPOINT -output $MODEL_OUTPUT -batch_size $BATCH_SIZE -version 2.2
+# convert format for the the standardized evaluation
+python convert.py -input $CHECKPOINT/$MODEL_OUTPUT -output $CONVERTED_MODEL_OUTPUT
 
 # clone the standardized evaluation repository
 git clone https://github.com/Tomiinek/MultiWOZ_Evaluation
@@ -98,7 +100,7 @@ cd MultiWOZ_Evaluation
 pip install -r requirements.txt
 
 # do standardized evaluation
-python evaluate.py -i $CHECKPOINT/$MODEL_OUTPUT -b -s -r
+python evaluate.py -i $CONVERTED_MODEL_OUTPUT -b -s -r
 ```
 
 ## Acknowledgements
